@@ -1,0 +1,190 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+type Quiz = {
+  id: number;
+  title: string;
+  description: string;
+  created_at: string;
+  time_limit: number | null;
+  code: string | null;
+  status: "draft" | "published" | "closed";
+  show_result_to_student: boolean;
+};
+
+const statusStyles = {
+  draft: "bg-amber-50 text-amber-700 ring-amber-200",
+  published: "bg-teal-50 text-teal-700 ring-teal-200",
+  closed: "bg-slate-100 text-slate-700 ring-slate-300",
+};
+
+export default function QuizList() {
+  const router = useRouter();
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function fetchQuizzes() {
+      const token = localStorage.getItem("access_token");
+
+      if (!token) {
+        router.push("/sign-in");
+        return;
+      }
+
+      try {
+        const response = await fetch("http://localhost:8000/api/quizzes/", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Could not load quizzes.");
+        }
+
+        const data = await response.json();
+        setQuizzes(data);
+      } catch (error) {
+        console.error(error);
+        setError("Could not load quizzes. Make sure the backend is running.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchQuizzes();
+  }, [router]);
+
+  return (
+    <main className="min-h-screen bg-[#f6f8fb] text-slate-950">
+      <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-8 sm:px-10 lg:px-12">
+        <header className="flex items-center justify-between">
+          <Link className="text-xl font-bold tracking-normal" href="/">
+            QuizPlatform
+          </Link>
+          <Link
+            className="rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800"
+            href="/create_quiz"
+          >
+            New quiz
+          </Link>
+        </header>
+
+        <div className="py-12">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-teal-700">
+                Quizzes
+              </p>
+              <h1 className="text-4xl font-bold tracking-normal">
+                Your quiz library
+              </h1>
+              <p className="mt-3 max-w-2xl text-lg leading-8 text-slate-600">
+                Review drafts, share published quiz codes, and continue editing
+                your classroom activities.
+              </p>
+            </div>
+          </div>
+
+          {isLoading && (
+            <div className="mt-10 rounded-lg border border-slate-200 bg-white p-8 text-center text-sm font-semibold text-slate-600 shadow-sm">
+              Loading quizzes...
+            </div>
+          )}
+
+          {error && (
+            <div className="mt-10 rounded-lg border border-red-100 bg-red-50 p-5 text-sm font-semibold text-red-700">
+              {error}
+            </div>
+          )}
+
+          {!isLoading && !error && quizzes.length === 0 && (
+            <div className="mt-10 rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
+              <h2 className="text-2xl font-bold text-slate-950">
+                No quizzes yet
+              </h2>
+              <p className="mx-auto mt-3 max-w-md text-slate-600">
+                Create your first quiz, then it will appear here for editing
+                and sharing.
+              </p>
+              <Link
+                className="mt-6 inline-flex h-12 items-center justify-center rounded-md bg-teal-700 px-5 text-base font-semibold text-white transition hover:bg-teal-800"
+                href="/create_quiz"
+              >
+                Create quiz
+              </Link>
+            </div>
+          )}
+
+          {!isLoading && !error && quizzes.length > 0 && (
+            <div className="mt-10 grid gap-4">
+              {quizzes.map((quiz) => (
+                <article
+                  className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-300 hover:shadow-md"
+                  key={quiz.id}
+                >
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <h2 className="text-2xl font-bold tracking-normal text-slate-950">
+                          {quiz.title}
+                        </h2>
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] ring-1 ${statusStyles[quiz.status]}`}
+                        >
+                          {quiz.status}
+                        </span>
+                      </div>
+                      <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
+                        {quiz.description}
+                      </p>
+                    </div>
+
+                    <Link
+                      className="inline-flex h-11 shrink-0 items-center justify-center rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-900 transition hover:border-slate-900"
+                      href={`/quiz/${quiz.id}`}
+                    >
+                      View quiz
+                    </Link>
+                  </div>
+
+                  <div className="mt-6 grid gap-3 border-t border-slate-100 pt-5 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
+                    <div>
+                      <span className="block font-semibold text-slate-900">
+                        Code
+                      </span>
+                      {quiz.code || "Not published"}
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-slate-900">
+                        Time limit
+                      </span>
+                      {quiz.time_limit ? `${quiz.time_limit} minutes` : "None"}
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-slate-900">
+                        Results
+                      </span>
+                      {quiz.show_result_to_student ? "Shown to students" : "Hidden"}
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-slate-900">
+                        Created
+                      </span>
+                      {new Date(quiz.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+    </main>
+  );
+}
