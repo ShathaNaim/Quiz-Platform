@@ -9,15 +9,59 @@ class QuizSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['author']
 
-class QuestionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Question
-        fields = '__all__'
-
+        
 class ChoiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Choice
-        fields = '__all__'
+        fields = ["id", "text", "is_correct", "question"]
+
+class QuestionSerializer(serializers.ModelSerializer):
+    choices = ChoiceSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Question
+        fields = ["id", "quiz", "text", "points", "order", "choices"]
+
+
+class PublicChoiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Choice
+        fields = ["id", "text"]
+
+
+class PublicQuestionSerializer(serializers.ModelSerializer):
+    choices = PublicChoiceSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Question
+        fields = ["id", "text", "points", "order", "choices"]
+
+
+class JoinQuizSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=10)
+
+
+class JoinedQuizSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Quiz
+        fields = ["id", "title", "description", "time_limit", "code", "show_result_to_student"]
+
+
+class StartAttemptSerializer(serializers.Serializer):
+    quiz = serializers.IntegerField()
+    participant_name = serializers.CharField(max_length=255)
+    participant_email = serializers.EmailField(required=False, allow_blank=True)
+
+
+class SubmitAttemptAnswerSerializer(serializers.Serializer):
+    question = serializers.IntegerField()
+    selected_choice = serializers.IntegerField()
+
+
+class SubmitAttemptSerializer(serializers.Serializer):
+    answers = SubmitAttemptAnswerSerializer(many=True)
+
+
 
 class AttemptSerializer(serializers.ModelSerializer):
     class Meta:

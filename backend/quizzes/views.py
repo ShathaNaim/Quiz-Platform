@@ -1,10 +1,15 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from .models import Quiz, Question, Choice, Attempt, Answer, AttemptEvent
 from .serializers import (QuizSerializer, QuestionSerializer, ChoiceSerializer,
- AttemptSerializer, AnswerSerializer, AttemptEventSerializer,RegisterSerializer)
+ AttemptSerializer, AnswerSerializer, AttemptEventSerializer,RegisterSerializer,
+ JoinQuizSerializer, JoinedQuizSerializer, StartAttemptSerializer,
+ PublicQuestionSerializer, SubmitAttemptSerializer)
 from django.contrib.auth.models import User
-from rest_framework import viewsets,mixins
+from rest_framework import status, viewsets,mixins
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.response import Response
 from rest_framework import generics
 # Create your views here.
 class RegisterView(generics.CreateAPIView):
@@ -17,29 +22,161 @@ class QuizViewSet(viewsets.ModelViewSet):
     serializer_class = QuizSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        return Quiz.objects.filter(author=self.request.user)
+
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+
+
 class QuestionViewSet(viewsets.ModelViewSet):
-    queryset = Question.objects.all()
     serializer_class = QuestionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = Question.objects.filter(quiz__author=self.request.user)
+        quiz_id = self.request.query_params.get("quiz")
+
+        if quiz_id:
+            queryset = queryset.filter(quiz_id=quiz_id)
+
+        return queryset
 
 class ChoiceViewSet(viewsets.ModelViewSet):
-    queryset = Choice.objects.all()
     serializer_class = ChoiceSerializer
+    permission_classes = [IsAuthenticated]
+    def get_queryset(self):
+        return Choice.objects.filter(question__quiz__author=self.request.user)
 
 class AttemptViewSet(viewsets.ModelViewSet):
     queryset = Attempt.objects.all()
     serializer_class = AttemptSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Attempt.objects.filter(
-            quiz__teacher=self.request.user
+            quiz__author=self.request.user
         ).prefetch_related("events")
 
 class AnswerViewSet(viewsets.ModelViewSet):
     queryset = Answer.objects.all()
     serializer_class = AnswerSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Answer.objects.filter(attempt__quiz__author=self.request.user)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def join_quiz(request):
+    serializer = JoinQuizSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    code = serializer.validated_data["code"].strip().upper()
+    quiz = get_object_or_404(Quiz, code=code, status="published")
+
+    return Response(JoinedQuizSerializer(quiz).data)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def start_attempt(request):
+    serializer = StartAttemptSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    quiz = get_object_or_404(
+        Quiz,
+        id=serializer.validated_data["quiz"],
+        status="published",
+    )
+
+    attempt = Attempt.objects.create(
+        quiz=quiz,
+        participant_name=serializer.validated_data["participant_name"],
+        participant_email=serializer.validated_data.get("participant_email", ""),
+        total_points=sum(question.points for question in quiz.questions.all()),
+    )
+
+    return Response(AttemptSerializer(attempt).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def attempt_questions(request, attempt_id):
+    attempt = get_object_or_404(
+        Attempt.objects.select_related("quiz"),
+        id=attempt_id,
+        status="in_progress",
+        quiz__status="published",
+    )
+    questions = attempt.quiz.questions.prefetch_related("choices").order_by("order", "id")
+
+    return Response(PublicQuestionSerializer(questions, many=True).data)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def submit_attempt(request, attempt_id):
+    attempt = get_object_or_404(
+        Attempt.objects.select_related("quiz"),
+        id=attempt_id,
+        status="in_progress",
+        quiz__status="published",
+    )
+    serializer = SubmitAttemptSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    answers_by_question = {
+        answer["question"]: answer["selected_choice"]
+        for answer in serializer.validated_data["answers"]
+    }
+    questions = attempt.quiz.questions.prefetch_related("choices").all()
+    total_points = sum(question.points for question in questions)
+    score = 0
+
+    Answer.objects.filter(attempt=attempt).delete()
+
+    for question in questions:
+        selected_choice_id = answers_by_question.get(question.id)
+        selected_choice = None
+        is_correct = False
+        points_awarded = 0
+
+        if selected_choice_id:
+            selected_choice = question.choices.filter(id=selected_choice_id).first()
+
+        if selected_choice and selected_choice.is_correct:
+            is_correct = True
+            points_awarded = question.points
+            score += question.points
+
+        Answer.objects.create(
+            attempt=attempt,
+            question=question,
+            selected_choice=selected_choice,
+            is_correct=is_correct,
+            points_awarded=points_awarded,
+        )
+
+    attempt.score = score
+    attempt.total_points = total_points
+    attempt.status = "submitted"
+    attempt.submitted_at = timezone.now()
+    attempt.save(update_fields=["score", "total_points", "status", "submitted_at"])
+
+    response_data = {
+        "attempt": attempt.id,
+        "status": attempt.status,
+        "show_result_to_student": attempt.quiz.show_result_to_student,
+    }
+
+    if attempt.quiz.show_result_to_student:
+        response_data["score"] = attempt.score
+        response_data["total_points"] = attempt.total_points
+
+    return Response(response_data)
 
 class AttemptEventViewSet(
     mixins.CreateModelMixin,
@@ -58,7 +195,7 @@ class AttemptEventViewSet(
 
         if user.is_authenticated:
             return AttemptEvent.objects.filter(
-                attempt__quiz__teacher=user
+                attempt__quiz__author=user
             ).select_related("attempt", "attempt__quiz")
 
         return AttemptEvent.objects.none()
