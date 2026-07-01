@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 export default function Home() {
   const router = useRouter();
+
   const [quizCode, setQuizCode] = useState("");
   const [token, setToken] = useState<string | null>(() => {
     if (typeof window === "undefined") {
@@ -14,6 +15,7 @@ export default function Home() {
 
     return localStorage.getItem("access_token");
   });
+   
 
   function handleJoinQuiz(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -24,7 +26,7 @@ export default function Home() {
       return;
     }
 
-    router.push(`/quiz/${encodeURIComponent(code)}`);
+    router.push(`/join_quiz?code=${encodeURIComponent(code.toUpperCase())}`);
   }
   return (
     <main className="min-h-screen bg-[#f6f8fb] text-slate-950">
@@ -44,6 +46,7 @@ export default function Home() {
             >
               Logout
             </button>
+
           ):(
           <Link
             className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-900 hover:bg-white"
@@ -51,6 +54,14 @@ export default function Home() {
           >
             Sign in
           </Link>)}
+
+          {token && (
+  <Link href="/quiz_list">
+    My quizzes
+  </Link>
+)}
+
+
           
 
         </header>

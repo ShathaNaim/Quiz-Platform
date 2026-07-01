@@ -26,6 +26,7 @@ export default function QuizList() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deletingQuizId, setDeletingQuizId] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchQuizzes() {
@@ -59,6 +60,51 @@ export default function QuizList() {
 
     fetchQuizzes();
   }, [router]);
+
+  async function handleDeleteQuiz(quizId: number) {
+    const token = localStorage.getItem("access_token");
+
+    if (!token) {
+      router.push("/sign-in");
+      return;
+    }
+
+    const shouldDelete = window.confirm(
+      "Delete this quiz and all of its questions?",
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    setDeletingQuizId(quizId);
+    setError("");
+
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/quizzes/${quizId}/`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Could not delete quiz.");
+      }
+
+      setQuizzes((currentQuizzes) =>
+        currentQuizzes.filter((quiz) => quiz.id !== quizId),
+      );
+    } catch (error) {
+      console.error(error);
+      setError("Could not delete quiz. Try again.");
+    } finally {
+      setDeletingQuizId(null);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[#f6f8fb] text-slate-950">
@@ -145,12 +191,30 @@ export default function QuizList() {
                       </p>
                     </div>
 
-                    <Link
-                      className="inline-flex h-11 shrink-0 items-center justify-center rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-900 transition hover:border-slate-900"
-                      href={`/quiz/${quiz.id}`}
-                    >
-                      View quiz
-                    </Link>
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      <Link
+                        className="inline-flex h-11 items-center justify-center rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-900 transition hover:border-slate-900"
+                        href={`/quiz_questions/${quiz.id}`}
+                      >
+                        Questions
+                      </Link>
+
+                      <Link
+                        className="inline-flex h-11 items-center justify-center rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-900 transition hover:border-slate-900"
+                        href={`/edit_quiz/${quiz.id}`}
+                      >
+                        Edit quiz
+                      </Link>
+
+                      <button
+                        className="inline-flex h-11 items-center justify-center rounded-md border border-red-200 px-4 text-sm font-semibold text-red-700 transition hover:border-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={deletingQuizId === quiz.id}
+                        type="button"
+                        onClick={() => handleDeleteQuiz(quiz.id)}
+                      >
+                        {deletingQuizId === quiz.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="mt-6 grid gap-3 border-t border-slate-100 pt-5 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-4">

@@ -61,7 +61,8 @@ export default function CreateQuiz() {
       });
 
       if (response.ok) {
-        router.push('/quiz_list');
+        const data = await response.json();
+        router.push(`/edit_quiz/${data.id}`);
         return;
       }
 
