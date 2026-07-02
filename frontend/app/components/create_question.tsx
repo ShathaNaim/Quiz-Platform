@@ -57,6 +57,7 @@ export default function CreateQuestion({ quizId, onQuestionCreated }: CreateQues
       }
 
       const question = await questionResponse.json();
+      router.push(`/quiz_questions/${quizId}`);
 
       await Promise.all(
         trimmedOptions.map((option, index) =>

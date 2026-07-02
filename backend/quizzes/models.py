@@ -13,6 +13,9 @@ class Quiz(models.Model):
     status = models.CharField(max_length=10, choices=[('draft', 'Draft'), ('published', 'Published'),('closed', 'Closed')], 
     default='draft')
     show_result_to_student = models.BooleanField(default=True)
+    available_from = models.DateTimeField(null=True, blank=True)
+    available_until = models.DateTimeField(null=True, blank=True)
+    max_attempts_per_email = models.PositiveIntegerField(default=1)
 
     def __str__(self):
         return self.title
@@ -41,7 +44,7 @@ class Attempt(models.Model):
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="attempts")
 
     participant_name = models.CharField(max_length=255)
-    participant_email = models.EmailField(blank=True)
+    participant_email = models.EmailField()
 
 
     started_at = models.DateTimeField(auto_now_add=True)

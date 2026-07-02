@@ -29,6 +29,7 @@ export default function SignIn() {
         const data = await response.json();
         localStorage.setItem("access_token", data.access);
         localStorage.setItem("refresh_token", data.refresh);
+        window.dispatchEvent(new Event("auth-token-changed"));
         router.push("/");
         return;
       }
@@ -59,11 +60,9 @@ export default function SignIn() {
           </Link>
         </header>
 
-        <div className="flex-1 items-center gap-8 py-12">
-
-
+        <div className="flex flex-1 items-center justify-center py-10 sm:py-12">
           <form
-            className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
+            className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
             onSubmit={handleSignIn}
           >
             <div className="space-y-5">

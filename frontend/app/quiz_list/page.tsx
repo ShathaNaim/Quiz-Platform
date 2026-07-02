@@ -44,15 +44,26 @@ export default function QuizList() {
           },
         });
 
+        if (response.status === 401) {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          router.push("/sign-in");
+          return;
+        }
+
         if (!response.ok) {
-          throw new Error("Could not load quizzes.");
+          throw new Error(`Could not load quizzes. Status: ${response.status}`);
         }
 
         const data = await response.json();
         setQuizzes(data);
-      } catch (error) {
-        console.error(error);
-        setError("Could not load quizzes. Make sure the backend is running.");
+    } catch (error) {
+      console.error(error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Could not load quizzes. Make sure the backend is running."
+      );
       } finally {
         setIsLoading(false);
       }
@@ -204,6 +215,12 @@ export default function QuizList() {
                         href={`/edit_quiz/${quiz.id}`}
                       >
                         Edit quiz
+                      </Link>
+                         <Link
+                        className="inline-flex h-11 items-center justify-center rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-900 transition hover:border-slate-900"
+                        href={`/quiz_attempts/${quiz.id}`}
+                      >
+                        Attempts
                       </Link>
 
                       <button

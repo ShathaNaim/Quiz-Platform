@@ -1,32 +1,72 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+function subscribeToTokenChanges(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener("auth-token-changed", onStoreChange);
+
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener("auth-token-changed", onStoreChange);
+  };
+}
+
+function getTokenSnapshot() {
+  return localStorage.getItem("access_token");
+}
+
+function getServerTokenSnapshot() {
+  return undefined;
+}
 
 export default function Home() {
   const router = useRouter();
 
   const [quizCode, setQuizCode] = useState("");
-  const [token, setToken] = useState<string | null>(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    return localStorage.getItem("access_token");
-  });
+  const [isFindingQuiz, setIsFindingQuiz] = useState(false);
+  const [joinError, setJoinError] = useState("");
+  const token = useSyncExternalStore(
+    subscribeToTokenChanges,
+    getTokenSnapshot,
+    getServerTokenSnapshot
+  );
    
 
-  function handleJoinQuiz(event: FormEvent<HTMLFormElement>) {
+  async function handleJoinQuiz(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const code = quizCode.trim();
+    const code = quizCode.trim().toUpperCase();
 
     if (!code) {
       return;
     }
 
-    router.push(`/join_quiz?code=${encodeURIComponent(code.toUpperCase())}`);
+    setIsFindingQuiz(true);
+    setJoinError("");
+
+    try {
+      const response = await fetch("http://localhost:8000/api/join-quiz/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Could not find quiz.");
+      }
+
+      router.push(`/join_quiz?code=${encodeURIComponent(code)}`);
+    } catch (error) {
+      console.error(error);
+      setJoinError("Could not find a published quiz with this code.");
+    } finally {
+      setIsFindingQuiz(false);
+    }
   }
   return (
     <main className="min-h-screen bg-[#f6f8fb] text-slate-950">
@@ -35,34 +75,43 @@ export default function Home() {
           <Link className="text-xl font-bold tracking-normal" href="/">
             QuizPlatform
           </Link>
-          {token ?(
-            <button
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-900 hover:bg-white"
-              onClick={() => {
-                localStorage.removeItem("access_token");
-                localStorage.removeItem("refresh_token");
-                setToken(null);
-              }}
-            >
-              Logout
-            </button>
+          {token === undefined ? (
+            <span className="h-10 w-20 rounded-md border border-transparent" />
+          ) : token ?(
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                className="rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800"
+                href="/quiz_list"
+              >
+                My quizzes
+              </Link>
+              <button
+                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-900 hover:bg-white"
+                onClick={() => {
+                  localStorage.removeItem("access_token");
+                  localStorage.removeItem("refresh_token");
+                  window.dispatchEvent(new Event("auth-token-changed"));
+                }}
+              >
+                Logout
+              </button>
+            </div>
 
           ):(
+            <div className="flex flex-wrap gap-2">
           <Link
             className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-900 hover:bg-white"
             href="/sign-in"
           >
             Sign in
-          </Link>)}
-
-          {token && (
-  <Link href="/quiz_list">
-    My quizzes
-  </Link>
-)}
-
-
-          
+          </Link>
+          <Link
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-900 hover:bg-white"
+            href="/sign-up"
+          >
+            Sign up
+          </Link>
+          </div>)}
 
         </header>
 
@@ -116,14 +165,22 @@ export default function Home() {
                 maxLength={12}
                 placeholder="ABC123"
                 value={quizCode}
-                onChange={(event) => setQuizCode(event.target.value)}
+                onChange={(event) => {
+                  setQuizCode(event.target.value.toUpperCase());
+                  setJoinError("");
+                }}
               />
+              {joinError && (
+                <p className="rounded-md bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                  {joinError}
+                </p>
+              )}
               <button
                 className="h-12 w-full rounded-md bg-slate-950 px-5 text-base font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
                 type="submit"
-                disabled={!quizCode.trim()}
+                disabled={isFindingQuiz || !quizCode.trim()}
               >
-                Join quiz
+                {isFindingQuiz ? "Finding..." : "Join quiz"}
               </button>
             </form>
           </div>

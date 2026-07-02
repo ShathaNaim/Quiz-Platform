@@ -36,8 +36,15 @@ export default function QuizQuestionsPage() {
       },
     );
 
+    if (response.status === 401) {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      router.push("/sign-in");
+      return [];
+    }
+
     if (!response.ok) {
-      throw new Error("Could not fetch questions.");
+      throw new Error(`Could not fetch questions. Status: ${response.status}`);
     }
 
     const data: Question[] = await response.json();
@@ -57,7 +64,9 @@ export default function QuizQuestionsPage() {
       .catch((error) => {
         if (shouldUpdate) {
           console.error(error);
-          setError("Could not load questions.");
+          setError(
+            error instanceof Error ? error.message : "Could not load questions.",
+          );
         }
       })
       .finally(() => {
@@ -100,8 +109,15 @@ export default function QuizQuestionsPage() {
         },
       );
 
+      if (response.status === 401) {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        router.push("/sign-in");
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error("Could not delete question.");
+        throw new Error(`Could not delete question. Status: ${response.status}`);
       }
 
       setQuestions((currentQuestions) =>
@@ -109,7 +125,11 @@ export default function QuizQuestionsPage() {
       );
     } catch (error) {
       console.error(error);
-      setError("Could not delete question. Try again.");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Could not delete question. Try again.",
+      );
     } finally {
       setDeletingQuestionId(null);
     }
@@ -135,6 +155,12 @@ export default function QuizQuestionsPage() {
               href={`/edit_quiz/${params.id}`}
             >
               Edit quiz
+            </Link>
+             <Link
+              className="inline-flex h-11 items-center justify-center rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-900 transition hover:border-slate-900"
+              href={`/quiz_preview/${params.id}`}
+            >
+              Preview quiz
             </Link>
           </div>
         </header>

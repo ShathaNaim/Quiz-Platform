@@ -9,6 +9,8 @@ type Quiz = {
   title: string;
   description: string;
   time_limit: number | null;
+  available_from: string | null;
+  available_until: string | null;
   code: string | null;
   status: "draft" | "published" | "closed";
   show_result_to_student: boolean;
@@ -19,9 +21,26 @@ type QuizForm = {
   description: string;
   code: string;
   timeLimit: string;
+  availableFrom: string;
+  availableUntil: string;
   status: Quiz["status"];
   showResults: boolean;
 };
+
+function toDateTimeLocalValue(value: string | null) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const timezoneOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
+}
 
 export default function EditQuizPage() {
   const params = useParams<{ id: string }>();
@@ -32,6 +51,8 @@ export default function EditQuizPage() {
     description: "",
     code: "",
     timeLimit: "",
+    availableFrom: "",
+    availableUntil: "",
     status: "draft",
     showResults: true,
   });
@@ -86,6 +107,8 @@ export default function EditQuizPage() {
           description: data.description,
           code: data.code || "",
           timeLimit: data.time_limit ? String(data.time_limit) : "",
+          availableFrom: toDateTimeLocalValue(data.available_from),
+          availableUntil: toDateTimeLocalValue(data.available_until),
           status: data.status,
           showResults: data.show_result_to_student,
         });
@@ -131,6 +154,8 @@ export default function EditQuizPage() {
             description: quizForm.description,
             code: quizForm.code || null,
             time_limit: quizForm.timeLimit ? Number(quizForm.timeLimit) : null,
+            available_from: quizForm.availableFrom || null,
+            available_until: quizForm.availableUntil || null,
             status: quizForm.status,
             show_result_to_student: quizForm.showResults,
           }),
@@ -308,6 +333,48 @@ export default function EditQuizPage() {
                 <div>
                   <label
                     className="mb-2 block text-sm font-semibold text-slate-700"
+                    htmlFor="available-from"
+                  >
+                    Available from
+                  </label>
+                  <input
+                    className="h-12 w-full rounded-md border border-slate-300 px-4 text-base text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-100"
+                    id="available-from"
+                    type="datetime-local"
+                    value={quizForm.availableFrom}
+                    onChange={(event) =>
+                      setQuizForm((currentForm) => ({
+                        ...currentForm,
+                        availableFrom: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label
+                    className="mb-2 block text-sm font-semibold text-slate-700"
+                    htmlFor="available-until"
+                  >
+                    Available until
+                  </label>
+                  <input
+                    className="h-12 w-full rounded-md border border-slate-300 px-4 text-base text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-100"
+                    id="available-until"
+                    type="datetime-local"
+                    value={quizForm.availableUntil}
+                    onChange={(event) =>
+                      setQuizForm((currentForm) => ({
+                        ...currentForm,
+                        availableUntil: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label
+                    className="mb-2 block text-sm font-semibold text-slate-700"
                     htmlFor="time-limit"
                   >
                     Time limit
@@ -350,6 +417,7 @@ export default function EditQuizPage() {
                     <option value="closed">Closed</option>
                   </select>
                 </div>
+        
 
                 <label className="flex min-h-12 items-center justify-between rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-700">
                   Show results

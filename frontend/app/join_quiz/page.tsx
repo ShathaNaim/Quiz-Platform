@@ -1,8 +1,8 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type JoinedQuiz = {
   id: number;
@@ -13,22 +13,19 @@ type JoinedQuiz = {
   show_result_to_student: boolean;
 };
 
-export default function JoinQuizPage() {
+function JoinQuizContent() {
   const router = useRouter();
-  const [initialCode] = useState(() => {
-    if (typeof window === "undefined") {
-      return "";
-    }
-
-    return new URLSearchParams(window.location.search).get("code")?.toUpperCase() || "";
-  });
-  const [code, setCode] = useState(initialCode);
+  const searchParams = useSearchParams();
+  const codeFromUrl = searchParams.get("code")?.trim().toUpperCase() || "";
+  const [code, setCode] = useState(codeFromUrl);
   const [quiz, setQuiz] = useState<JoinedQuiz | null>(null);
   const [participantName, setParticipantName] = useState("");
   const [participantEmail, setParticipantEmail] = useState("");
-  const [isFindingQuiz, setIsFindingQuiz] = useState(Boolean(initialCode));
+  const [isFindingQuiz, setIsFindingQuiz] = useState(Boolean(codeFromUrl));
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState("");
+  const activeQuiz = quiz && (!codeFromUrl || quiz.code === codeFromUrl) ? quiz : null;
+  const isLoadingQuiz = isFindingQuiz || Boolean(codeFromUrl && !activeQuiz && !error);
 
   const fetchQuiz = useCallback(async (codeToFind: string) => {
     const normalizedCode = codeToFind.trim().toUpperCase();
@@ -58,11 +55,11 @@ export default function JoinQuizPage() {
   useEffect(() => {
     let shouldUpdate = true;
 
-    if (!initialCode.trim()) {
+    if (!codeFromUrl) {
       return;
     }
 
-    fetchQuiz(initialCode)
+    fetchQuiz(codeFromUrl)
       .then((data) => {
         if (shouldUpdate && data) {
           setQuiz(data);
@@ -72,6 +69,7 @@ export default function JoinQuizPage() {
       .catch((error) => {
         if (shouldUpdate) {
           console.error(error);
+          setCode(codeFromUrl);
           setError("Could not find a published quiz with this code.");
         }
       })
@@ -84,7 +82,7 @@ export default function JoinQuizPage() {
     return () => {
       shouldUpdate = false;
     };
-  }, [fetchQuiz, initialCode]);
+  }, [codeFromUrl, fetchQuiz]);
 
   async function findQuiz(codeToFind = code) {
     const normalizedCode = codeToFind.trim().toUpperCase();
@@ -141,14 +139,19 @@ export default function JoinQuizPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Could not start quiz.");
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.detail || "Could not start quiz.");
       }
 
       const data = await response.json();
       router.push(`/take_quiz/${data.id}`);
     } catch (error) {
       console.error(error);
-      setError("Could not start the quiz. Try again.");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Could not start the quiz. Try again.",
+      );
     } finally {
       setIsStarting(false);
     }
@@ -169,46 +172,54 @@ export default function JoinQuizPage() {
           </Link>
         </header>
 
-        <div className="grid flex-1 items-center gap-8 py-12 lg:grid-cols-[0.9fr_1.1fr]">
-          <div>
-            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-teal-700">
+        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center py-10 sm:py-14">
+          <div className="mb-7">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-teal-700">
               Join quiz
             </p>
-            <h1 className="text-4xl font-bold leading-tight tracking-normal sm:text-5xl">
-              Enter the room and start when ready.
+            <h1 className="max-w-3xl text-3xl font-bold leading-tight tracking-normal sm:text-5xl">
+              Enter your details and start when ready.
             </h1>
-            <p className="mt-5 max-w-md text-lg leading-8 text-slate-600">
-              Confirm the quiz code, add your name, and begin the attempt.
+            <p className="mt-4 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
+              Add your name and email, then begin the quiz attempt.
             </p>
           </div>
 
           <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-            <form className="space-y-5" onSubmit={handleFindQuiz}>
-              <div>
-                <label
-                  className="mb-2 block text-sm font-semibold text-slate-700"
-                  htmlFor="code"
-                >
-                  Quiz code
-                </label>
-                <input
-                  className="h-12 w-full rounded-md border border-slate-300 px-4 text-base font-bold uppercase tracking-[0.14em] text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-100"
-                  id="code"
-                  maxLength={10}
-                  required
-                  value={code}
-                  onChange={(event) => setCode(event.target.value.toUpperCase())}
-                />
+            {!activeQuiz && isLoadingQuiz && (
+              <div className="rounded-md bg-slate-50 px-4 py-5 text-center text-sm font-semibold text-slate-700">
+                Finding quiz...
               </div>
+            )}
 
-              <button
-                className="h-12 w-full rounded-md border border-slate-300 px-5 text-base font-semibold text-slate-900 transition hover:border-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isFindingQuiz || !code.trim()}
-                type="submit"
-              >
-                {isFindingQuiz ? "Finding..." : "Find quiz"}
-              </button>
-            </form>
+            {!activeQuiz && !isLoadingQuiz && (
+              <form className="space-y-5" onSubmit={handleFindQuiz}>
+                <div>
+                  <label
+                    className="mb-2 block text-sm font-semibold text-slate-700"
+                    htmlFor="code"
+                  >
+                    Quiz code
+                  </label>
+                  <input
+                    className="h-12 w-full rounded-md border border-slate-300 px-4 text-base font-bold uppercase tracking-[0.14em] text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-100"
+                    id="code"
+                    maxLength={10}
+                    required
+                    value={code}
+                    onChange={(event) => setCode(event.target.value.toUpperCase())}
+                  />
+                </div>
+
+                <button
+                  className="h-12 w-full rounded-md border border-slate-300 px-5 text-base font-semibold text-slate-900 transition hover:border-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={!code.trim()}
+                  type="submit"
+                >
+                  Find quiz
+                </button>
+              </form>
+            )}
 
             {error && (
               <p className="mt-5 rounded-md bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
@@ -216,19 +227,28 @@ export default function JoinQuizPage() {
               </p>
             )}
 
-            {quiz && (
-              <form className="mt-6 border-t border-slate-100 pt-6" onSubmit={handleStartQuiz}>
-                <div className="rounded-md bg-slate-50 p-4">
-                  <h2 className="text-xl font-bold text-slate-950">{quiz.title}</h2>
+            {activeQuiz && (
+              <form onSubmit={handleStartQuiz}>
+                <div className="rounded-md border border-slate-100 bg-slate-50 p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-950">
+                        {activeQuiz.title}
+                      </h2>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        {activeQuiz.description}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-md bg-white px-3 py-2 text-sm font-bold uppercase tracking-[0.14em] text-teal-700 ring-1 ring-slate-200">
+                      {activeQuiz.code}
+                    </span>
+                  </div>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    {quiz.description}
-                  </p>
-                  <p className="mt-3 text-sm font-semibold text-slate-700">
-                    Time limit: {quiz.time_limit ? `${quiz.time_limit} minutes` : "None"}
+                    Time limit: {activeQuiz.time_limit ? `${activeQuiz.time_limit} minutes` : "None"}
                   </p>
                 </div>
 
-                <div className="mt-5 space-y-5">
+                <div className="mt-6 space-y-5 border-t border-slate-100 pt-6">
                   <div>
                     <label
                       className="mb-2 block text-sm font-semibold text-slate-700"
@@ -255,6 +275,7 @@ export default function JoinQuizPage() {
                     <input
                       className="h-12 w-full rounded-md border border-slate-300 px-4 text-base text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-100"
                       id="participant-email"
+                      required
                       type="email"
                       value={participantEmail}
                       onChange={(event) => setParticipantEmail(event.target.value)}
@@ -263,7 +284,11 @@ export default function JoinQuizPage() {
 
                   <button
                     className="h-12 w-full rounded-md bg-teal-700 px-5 text-base font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                    disabled={isStarting || !participantName.trim()}
+                    disabled={
+                      isStarting ||
+                      !participantName.trim() ||
+                      !participantEmail.trim()
+                    }
                     type="submit"
                   >
                     {isStarting ? "Starting..." : "Start quiz"}
@@ -275,5 +300,25 @@ export default function JoinQuizPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function JoinQuizPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#f6f8fb] text-slate-950">
+          <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-8 sm:px-10 lg:px-12">
+            <div className="flex flex-1 items-center justify-center">
+              <div className="rounded-md bg-white px-6 py-5 text-sm font-semibold text-slate-700 shadow-sm">
+                Loading quiz...
+              </div>
+            </div>
+          </section>
+        </main>
+      }
+    >
+      <JoinQuizContent />
+    </Suspense>
   );
 }

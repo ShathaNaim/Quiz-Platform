@@ -12,6 +12,49 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import generics
 # Create your views here.
+TAB_SWITCH_AUTO_SUBMIT_LIMIT = 3
+
+
+def submit_attempt_with_answers(attempt, answers):
+    answers_by_question = {
+        answer["question"]: answer["selected_choice"]
+        for answer in answers
+    }
+    questions = attempt.quiz.questions.prefetch_related("choices").all()
+    total_points = sum(question.points for question in questions)
+    score = 0
+
+    Answer.objects.filter(attempt=attempt).delete()
+
+    for question in questions:
+        selected_choice_id = answers_by_question.get(question.id)
+        selected_choice = None
+        is_correct = False
+        points_awarded = 0
+
+        if selected_choice_id:
+            selected_choice = question.choices.filter(id=selected_choice_id).first()
+
+        if selected_choice and selected_choice.is_correct:
+            is_correct = True
+            points_awarded = question.points
+            score += question.points
+
+        Answer.objects.create(
+            attempt=attempt,
+            question=question,
+            selected_choice=selected_choice,
+            is_correct=is_correct,
+            points_awarded=points_awarded,
+        )
+
+    attempt.score = score
+    attempt.total_points = total_points
+    attempt.status = "submitted"
+    attempt.submitted_at = timezone.now()
+    attempt.save(update_fields=["score", "total_points", "status", "submitted_at"])
+
+
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
@@ -55,10 +98,16 @@ class AttemptViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Attempt.objects.filter(
+        queryset = Attempt.objects.filter(
             quiz__author=self.request.user
         ).prefetch_related("events")
 
+        quiz_id = self.request.query_params.get("quiz")
+
+        if quiz_id:
+            queryset = queryset.filter(quiz_id=quiz_id)
+
+        return queryset
 class AnswerViewSet(viewsets.ModelViewSet):
     queryset = Answer.objects.all()
     serializer_class = AnswerSerializer
@@ -92,14 +141,47 @@ def start_attempt(request):
         status="published",
     )
 
+    participant_email = serializer.validated_data.get("participant_email", "").strip().lower()
+
+    existing_attempt = Attempt.objects.filter(
+        quiz=quiz,
+        participant_email__iexact=participant_email,
+    ).first()
+
+    if existing_attempt:
+        return Response(
+            {"detail": "You already started this quiz."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     attempt = Attempt.objects.create(
         quiz=quiz,
         participant_name=serializer.validated_data["participant_name"],
-        participant_email=serializer.validated_data.get("participant_email", ""),
+        participant_email=participant_email,
         total_points=sum(question.points for question in quiz.questions.all()),
     )
 
     return Response(AttemptSerializer(attempt).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def attempt_detail(request, attempt_id):
+    attempt = get_object_or_404(
+        Attempt.objects.select_related("quiz"),
+        id=attempt_id,
+        quiz__status="published",
+    )
+
+    return Response(
+        {
+            "id": attempt.id,
+            "started_at": attempt.started_at,
+            "submitted_at": attempt.submitted_at,
+            "status": attempt.status,
+            "time_limit": attempt.quiz.time_limit,
+        }
+    )
 
 
 @api_view(["GET"])
@@ -128,48 +210,13 @@ def submit_attempt(request, attempt_id):
     serializer = SubmitAttemptSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
-    answers_by_question = {
-        answer["question"]: answer["selected_choice"]
-        for answer in serializer.validated_data["answers"]
-    }
-    questions = attempt.quiz.questions.prefetch_related("choices").all()
-    total_points = sum(question.points for question in questions)
-    score = 0
-
-    Answer.objects.filter(attempt=attempt).delete()
-
-    for question in questions:
-        selected_choice_id = answers_by_question.get(question.id)
-        selected_choice = None
-        is_correct = False
-        points_awarded = 0
-
-        if selected_choice_id:
-            selected_choice = question.choices.filter(id=selected_choice_id).first()
-
-        if selected_choice and selected_choice.is_correct:
-            is_correct = True
-            points_awarded = question.points
-            score += question.points
-
-        Answer.objects.create(
-            attempt=attempt,
-            question=question,
-            selected_choice=selected_choice,
-            is_correct=is_correct,
-            points_awarded=points_awarded,
-        )
-
-    attempt.score = score
-    attempt.total_points = total_points
-    attempt.status = "submitted"
-    attempt.submitted_at = timezone.now()
-    attempt.save(update_fields=["score", "total_points", "status", "submitted_at"])
+    submit_attempt_with_answers(attempt, serializer.validated_data["answers"])
 
     response_data = {
         "attempt": attempt.id,
         "status": attempt.status,
         "show_result_to_student": attempt.quiz.show_result_to_student,
+        "submitted_automatically": False,
     }
 
     if attempt.quiz.show_result_to_student:
@@ -184,6 +231,51 @@ class AttemptEventViewSet(
     viewsets.GenericViewSet
 ):
     serializer_class = AttemptEventSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        event = serializer.save()
+        attempt = event.attempt
+
+        tab_switch_count = attempt.events.filter(event_type="tab_switch").count()
+        page_refresh_count = attempt.events.filter(event_type="page_refresh").count()
+        fullscreen_exit_count = attempt.events.filter(event_type="fullscreen_exit").count()
+        total_event_count = attempt.events.filter(
+                event_type__in=["tab_switch", "page_refresh", "fullscreen_exit"]
+            ).count()
+
+        should_auto_submit = (
+                total_event_count >= 3
+                and attempt.status == "in_progress"
+            )
+
+        if should_auto_submit:
+            answers = request.data.get("answers", [])
+
+            if not isinstance(answers, list):
+                answers = []
+
+            submit_attempt_with_answers(attempt, answers)
+
+        headers = self.get_success_headers(serializer.data)
+
+        return Response(
+            {
+                **serializer.data,
+                "tab_switch_count": tab_switch_count,
+                "page_refresh_count": page_refresh_count,
+                "fullscreen_exit_count": fullscreen_exit_count,
+                "should_auto_submit": should_auto_submit,
+                "attempt_status": attempt.status,
+                "show_result_to_student": attempt.quiz.show_result_to_student,
+                "score": attempt.score,
+                "total_points": attempt.total_points,
+                "submitted_automatically": should_auto_submit,
+            },
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
 
     def get_permissions(self):
         if self.action == "create":

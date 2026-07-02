@@ -21,7 +21,10 @@ export default function CreateQuiz() {
   const [description, setDescription] = useState("");
   const [code, setCode] = useState(() => generateQuizCode());
   const [timeLimit, setTimeLimit] = useState("");
+  const [availableFrom, setAvailableFrom] = useState("");
+  const [availableUntil, setAvailableUntil] = useState("");
   const [showResults, setShowResults] = useState(true);
+  const [status, setStatus] = useState("draft");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -55,14 +58,16 @@ export default function CreateQuiz() {
           description,
           code,
           time_limit: timeLimit ? Number(timeLimit) : null,
+          available_from: availableFrom || null,
+          available_until: availableUntil || null,
           show_result_to_student: showResults,
-          status: "draft",
+          status: status,
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        router.push(`/edit_quiz/${data.id}`);
+        router.push('/quiz_list');
         return;
       }
 
@@ -92,15 +97,15 @@ export default function CreateQuiz() {
           </Link>
         </header>
 
-        <div className="items-center gap-8 py-12">
-          <div>
-            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-teal-700">
+        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center py-10 sm:py-14">
+          <div className="mb-7">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-teal-700">
               Create quiz
             </p>
-            <h1 className="text-4xl font-bold leading-tight tracking-normal sm:text-5xl">
+            <h1 className="max-w-3xl text-3xl font-bold leading-tight tracking-normal sm:text-5xl">
               Start with the quiz details.
             </h1>
-            <p className="mt-5 max-w-md text-lg leading-8 text-slate-600">
+            <p className="mt-4 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
               Set the title, instructions, and timing first. You can add
               questions after the quiz is created.
             </p>
@@ -194,7 +199,60 @@ export default function CreateQuiz() {
                   />
                 </div>
 
-                <label className="flex min-h-12 items-center justify-between rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-700">
+                <div>
+                  <label
+                    className="mb-2 block text-sm font-semibold text-slate-700"
+                    htmlFor="available-from"
+                  >
+                    Available from
+                  </label>
+                  <input
+                    className="h-12 w-full rounded-md border border-slate-300 px-4 text-base text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-100"
+                    id="available-from"
+                    type="datetime-local"
+                    value={availableFrom}
+                    onChange={(event) => setAvailableFrom(event.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    className="mb-2 block text-sm font-semibold text-slate-700"
+                    htmlFor="available-until"
+                  >
+                    Available until
+                  </label>
+                  <input
+                    className="h-12 w-full rounded-md border border-slate-300 px-4 text-base text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-100"
+                    id="available-until"
+                    type="datetime-local"
+                    value={availableUntil}
+                    onChange={(event) => setAvailableUntil(event.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    className="mb-2 block text-sm font-semibold text-slate-700"
+                    htmlFor="status"
+                  >
+                    Status
+                  </label>
+                  <select
+                    className="h-12 w-full rounded-md border border-slate-300 px-4 text-base text-slate-950 outline-none transition focus:border-teal-700 focus:ring-4 focus:ring-teal-100"
+                    id="status"
+                    value={status}
+                    onChange={(event) =>
+                      setStatus(event.target.value)
+                    }
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </div>
+
+                <label className="flex min-h-12 items-center justify-between rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-700 sm:col-span-2">
                   Show results
                   <input
                     checked={showResults}

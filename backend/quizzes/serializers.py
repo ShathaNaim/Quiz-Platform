@@ -64,9 +64,22 @@ class SubmitAttemptSerializer(serializers.Serializer):
 
 
 class AttemptSerializer(serializers.ModelSerializer):
+    tab_switch_count = serializers.SerializerMethodField()
+    page_refresh_count = serializers.SerializerMethodField()
+    fullscreen_exit_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Attempt
         fields = '__all__'
+
+    def get_tab_switch_count(self, obj):
+        return obj.events.filter(event_type="tab_switch").count()
+
+    def get_page_refresh_count(self, obj):
+        return obj.events.filter(event_type="page_refresh").count()
+
+    def get_fullscreen_exit_count(self, obj):
+        return obj.events.filter(event_type="fullscreen_exit").count()
 
 class AnswerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -93,13 +106,13 @@ class AttemptEventSerializer(serializers.ModelSerializer):
         return data
 
     def get_tab_switch_count(self, obj):
-        return obj.events.filter(event_type="tab_switch").count()
+        return obj.attempt.events.filter(event_type="tab_switch").count()
 
     def get_page_refresh_count(self, obj):
-        return obj.events.filter(event_type="page_refresh").count()
+        return obj.attempt.events.filter(event_type="page_refresh").count()
 
     def get_fullscreen_exit_count(self, obj):
-        return obj.events.filter(event_type="fullscreen_exit").count()
+        return obj.attempt.events.filter(event_type="fullscreen_exit").count()
 
 
 class RegisterSerializer(serializers.ModelSerializer):

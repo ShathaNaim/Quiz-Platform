@@ -10,6 +10,7 @@ from .views import (
     AttemptEventViewSet,
     join_quiz,
     start_attempt,
+    attempt_detail,
     attempt_questions,
     submit_attempt,
 )
@@ -30,6 +31,7 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('join-quiz/', join_quiz, name='join-quiz'),
     path('attempts/start/', start_attempt, name='start-attempt'),
+    path('attempts/<int:attempt_id>/', attempt_detail, name='attempt-detail'),
     path('attempts/<int:attempt_id>/questions/', attempt_questions, name='attempt-questions'),
     path('attempts/<int:attempt_id>/submit/', submit_attempt, name='submit-attempt'),
     path('', include(router.urls)),
