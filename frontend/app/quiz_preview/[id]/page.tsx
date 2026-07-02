@@ -29,7 +29,7 @@ export default function QuizPreviewPage() {
         setError("");
 
         const response = await fetch(
-          `http://localhost:8000/api/questions/?quiz=${params.id}`,
+          `/api/questions/?quiz=${params.id}`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("access_token")}`,

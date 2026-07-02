@@ -61,7 +61,7 @@ export default function EditQuestionPage() {
 
       try {
         const response = await fetch(
-          `http://localhost:8000/api/questions/${params.id}/`,
+          `/api/questions/${params.id}/`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -115,7 +115,7 @@ export default function EditQuestionPage() {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/api/questions/${params.id}/`,
+        `/api/questions/${params.id}/`,
         {
           method: "PATCH",
           headers: {
@@ -135,7 +135,7 @@ export default function EditQuestionPage() {
 
       await Promise.all(
         questionForm.choices.map((choice) =>
-          fetch(`http://localhost:8000/api/choices/${choice.id}/`, {
+          fetch(`/api/choices/${choice.id}/`, {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
@@ -182,7 +182,7 @@ export default function EditQuestionPage() {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/api/questions/${params.id}/`,
+        `/api/questions/${params.id}/`,
         {
           method: "DELETE",
           headers: {

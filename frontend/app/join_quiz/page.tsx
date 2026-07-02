@@ -34,7 +34,7 @@ function JoinQuizContent() {
       return null;
     }
 
-    const response = await fetch("http://localhost:8000/api/join-quiz/", {
+    const response = await fetch("/api/join-quiz/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -126,7 +126,7 @@ function JoinQuizContent() {
     setError("");
 
     try {
-      const response = await fetch("http://localhost:8000/api/attempts/start/", {
+      const response = await fetch("/api/attempts/start/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

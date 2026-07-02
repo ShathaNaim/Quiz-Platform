@@ -48,7 +48,7 @@ export default function Home() {
     setJoinError("");
 
     try {
-      const response = await fetch("http://localhost:8000/api/join-quiz/", {
+      const response = await fetch("/api/join-quiz/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

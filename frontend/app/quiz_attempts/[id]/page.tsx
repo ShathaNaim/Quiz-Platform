@@ -37,7 +37,7 @@ export default function QuizAttemptsPage() {
                 setIsLoading(true);
                 setError("");
                 const response = await fetch(
-                    `http://localhost:8000/api/attempts/?quiz=${params.id}`,
+                    `/api/attempts/?quiz=${params.id}`,
                     {
                         headers: {
                             Authorization: `Bearer ${localStorage.getItem(

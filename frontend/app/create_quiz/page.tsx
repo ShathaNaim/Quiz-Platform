@@ -47,7 +47,7 @@ export default function CreateQuiz() {
     }
 
     try {
-      const response = await fetch("http://localhost:8000/api/quizzes/", {
+      const response = await fetch("/api/quizzes/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -66,7 +66,6 @@ export default function CreateQuiz() {
       });
 
       if (response.ok) {
-        const data = await response.json();
         router.push('/quiz_list');
         return;
       }

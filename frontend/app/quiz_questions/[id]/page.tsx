@@ -28,7 +28,7 @@ export default function QuizQuestionsPage() {
     }
 
     const response = await fetch(
-      `http://localhost:8000/api/questions/?quiz=${params.id}`,
+      `/api/questions/?quiz=${params.id}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -100,7 +100,7 @@ export default function QuizQuestionsPage() {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/api/questions/${questionId}/`,
+        `/api/questions/${questionId}/`,
         {
           method: "DELETE",
           headers: {

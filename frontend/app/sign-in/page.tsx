@@ -17,7 +17,7 @@ export default function SignIn() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("http://localhost:8000/api/token/", {
+      const response = await fetch("/api/token/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

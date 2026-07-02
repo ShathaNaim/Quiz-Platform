@@ -39,7 +39,7 @@ export default function CreateQuestion({ quizId, onQuestionCreated }: CreateQues
     }
 
     try {
-      const questionResponse = await fetch("http://localhost:8000/api/questions/", {
+      const questionResponse = await fetch("/api/questions/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -61,7 +61,7 @@ export default function CreateQuestion({ quizId, onQuestionCreated }: CreateQues
 
       await Promise.all(
         trimmedOptions.map((option, index) =>
-          fetch("http://localhost:8000/api/choices/", {
+          fetch("/api/choices/", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

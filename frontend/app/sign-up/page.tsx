@@ -12,7 +12,7 @@ export default function SignUpPage() {
 async function handleSignUp(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
-    await fetch('http://localhost:8000/api/register/', {
+    await fetch('/api/register/', {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

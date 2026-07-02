@@ -90,7 +90,7 @@ export default function TakeQuizPage() {
         setError("");
 
         const detailResponse = await fetch(
-          `http://localhost:8000/api/attempts/${attemptId}/`
+          `/api/attempts/${attemptId}/`
         );
 
         if (!detailResponse.ok) {
@@ -112,7 +112,7 @@ export default function TakeQuizPage() {
         }
 
         const questionsResponse = await fetch(
-          `http://localhost:8000/api/attempts/${attemptId}/questions/`
+          `/api/attempts/${attemptId}/questions/`
         );
 
         if (!questionsResponse.ok) {
@@ -160,7 +160,7 @@ export default function TakeQuizPage() {
         );
 
         const response = await fetch(
-          `http://localhost:8000/api/attempts/${attemptId}/submit/`,
+          `/api/attempts/${attemptId}/submit/`,
           {
             method: "POST",
             headers: {
@@ -229,7 +229,7 @@ export default function TakeQuizPage() {
         })
       );
 
-      const response = await fetch("http://localhost:8000/api/attempt-events/", {
+      const response = await fetch("/api/attempt-events/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

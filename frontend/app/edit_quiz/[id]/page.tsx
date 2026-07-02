@@ -83,7 +83,7 @@ export default function EditQuizPage() {
 
       try {
         const response = await fetch(
-          `http://localhost:8000/api/quizzes/${params.id}/`,
+          `/api/quizzes/${params.id}/`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -142,7 +142,7 @@ export default function EditQuizPage() {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/api/quizzes/${params.id}/`,
+        `/api/quizzes/${params.id}/`,
         {
           method: "PATCH",
           headers: {
@@ -198,7 +198,7 @@ export default function EditQuizPage() {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/api/quizzes/${params.id}/`,
+        `/api/quizzes/${params.id}/`,
         {
           method: "DELETE",
           headers: {
