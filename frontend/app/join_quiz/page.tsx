@@ -3,6 +3,7 @@
 import { FormEvent, Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { apiUrl } from "@/app/lib/api";
 
 type JoinedQuiz = {
   id: number;
@@ -34,7 +35,7 @@ function JoinQuizContent() {
       return null;
     }
 
-    const response = await fetch("/api/join-quiz/", {
+    const response = await fetch(apiUrl("/join-quiz/"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -126,7 +127,7 @@ function JoinQuizContent() {
     setError("");
 
     try {
-      const response = await fetch("/api/attempts/start/", {
+      const response = await fetch(apiUrl("/attempts/start/"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

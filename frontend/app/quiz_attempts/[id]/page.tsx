@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { apiUrl } from "@/app/lib/api";
 export default function QuizAttemptsPage() {
     type Attempt = {
         id: number;
@@ -37,7 +38,7 @@ export default function QuizAttemptsPage() {
                 setIsLoading(true);
                 setError("");
                 const response = await fetch(
-                    `/api/attempts/?quiz=${params.id}`,
+                    apiUrl(`/attempts/?quiz=${params.id}`),
                     {
                         headers: {
                             Authorization: `Bearer ${localStorage.getItem(

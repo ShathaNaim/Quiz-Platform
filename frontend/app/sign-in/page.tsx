@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { apiUrl } from "@/app/lib/api";
 
 export default function SignIn() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function SignIn() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/token/", {
+      const response = await fetch(apiUrl("/token/"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

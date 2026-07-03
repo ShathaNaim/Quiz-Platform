@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { apiUrl } from "@/app/lib/api";
 
 type Question = {
   id: number;
@@ -61,7 +62,7 @@ export default function EditQuestionPage() {
 
       try {
         const response = await fetch(
-          `/api/questions/${params.id}/`,
+          apiUrl(`/questions/${params.id}/`),
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -115,7 +116,7 @@ export default function EditQuestionPage() {
 
     try {
       const response = await fetch(
-        `/api/questions/${params.id}/`,
+        apiUrl(`/questions/${params.id}/`),
         {
           method: "PATCH",
           headers: {
@@ -135,7 +136,7 @@ export default function EditQuestionPage() {
 
       await Promise.all(
         questionForm.choices.map((choice) =>
-          fetch(`/api/choices/${choice.id}/`, {
+          fetch(apiUrl(`/choices/${choice.id}/`), {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
@@ -182,7 +183,7 @@ export default function EditQuestionPage() {
 
     try {
       const response = await fetch(
-        `/api/questions/${params.id}/`,
+        apiUrl(`/questions/${params.id}/`),
         {
           method: "DELETE",
           headers: {

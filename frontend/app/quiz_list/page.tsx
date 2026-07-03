@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { apiUrl } from "@/app/lib/api";
 
 type Quiz = {
   id: number;
@@ -38,7 +39,7 @@ export default function QuizList() {
       }
 
       try {
-        const response = await fetch("/api/quizzes/", {
+        const response = await fetch(apiUrl("/quizzes/"), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -93,7 +94,7 @@ export default function QuizList() {
 
     try {
       const response = await fetch(
-        `/api/quizzes/${quizId}/`,
+        apiUrl(`/quizzes/${quizId}/`),
         {
           method: "DELETE",
           headers: {

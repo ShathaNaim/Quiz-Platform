@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { apiUrl } from "@/app/lib/api";
 
 type CreateQuestionProps = {
   quizId: string;
@@ -39,7 +40,7 @@ export default function CreateQuestion({ quizId, onQuestionCreated }: CreateQues
     }
 
     try {
-      const questionResponse = await fetch("/api/questions/", {
+      const questionResponse = await fetch(apiUrl("/questions/"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -61,7 +62,7 @@ export default function CreateQuestion({ quizId, onQuestionCreated }: CreateQues
 
       await Promise.all(
         trimmedOptions.map((option, index) =>
-          fetch("/api/choices/", {
+          fetch(apiUrl("/choices/"), {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

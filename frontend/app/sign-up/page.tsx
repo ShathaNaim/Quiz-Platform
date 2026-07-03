@@ -2,6 +2,8 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
+import { apiUrl } from "@/app/lib/api";
+
 export default function SignUpPage() {
   const router = useRouter();
   const [username, setUsername] = useState('');
@@ -12,15 +14,26 @@ export default function SignUpPage() {
 async function handleSignUp(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
-    await fetch('/api/register/', {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ username, email, password }),
-    });
 
-    router.push('/sign-in');
+    try {
+      const response = await fetch(apiUrl("/register/"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, email, password }),
+      });
+
+      if (response.ok) {
+        router.push('/sign-in');
+        return;
+      }
+
+      setError("Could not create your account. Check the fields and try again.");
+    } catch (error) {
+      console.error("An error occurred during sign-up:", error);
+      setError("Could not connect to the register API.");
+    }
   }
 
   return (

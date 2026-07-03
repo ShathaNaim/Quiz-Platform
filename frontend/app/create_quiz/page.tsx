@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { apiUrl } from "@/app/lib/api";
 
 function generateQuizCode() {
   const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -47,7 +48,7 @@ export default function CreateQuiz() {
     }
 
     try {
-      const response = await fetch("/api/quizzes/", {
+      const response = await fetch(apiUrl("/quizzes/"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

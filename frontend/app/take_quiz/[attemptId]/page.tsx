@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { apiUrl } from "@/app/lib/api";
 
 type Choice = {
   id: number;
@@ -90,7 +91,7 @@ export default function TakeQuizPage() {
         setError("");
 
         const detailResponse = await fetch(
-          `/api/attempts/${attemptId}/`
+          apiUrl(`/attempts/${attemptId}/`)
         );
 
         if (!detailResponse.ok) {
@@ -112,7 +113,7 @@ export default function TakeQuizPage() {
         }
 
         const questionsResponse = await fetch(
-          `/api/attempts/${attemptId}/questions/`
+          apiUrl(`/attempts/${attemptId}/questions/`)
         );
 
         if (!questionsResponse.ok) {
@@ -160,7 +161,7 @@ export default function TakeQuizPage() {
         );
 
         const response = await fetch(
-          `/api/attempts/${attemptId}/submit/`,
+          apiUrl(`/attempts/${attemptId}/submit/`),
           {
             method: "POST",
             headers: {
@@ -229,7 +230,7 @@ export default function TakeQuizPage() {
         })
       );
 
-      const response = await fetch("/api/attempt-events/", {
+      const response = await fetch(apiUrl("/attempt-events/"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { apiUrl } from "@/app/lib/api";
 
 type Choice = {
   id: number;
@@ -29,7 +30,7 @@ export default function QuizPreviewPage() {
         setError("");
 
         const response = await fetch(
-          `/api/questions/?quiz=${params.id}`,
+          apiUrl(`/questions/?quiz=${params.id}`),
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("access_token")}`,

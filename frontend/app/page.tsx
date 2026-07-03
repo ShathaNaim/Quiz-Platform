@@ -3,6 +3,7 @@
 import { FormEvent, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { apiUrl } from "@/app/lib/api";
 
 function subscribeToTokenChanges(onStoreChange: () => void) {
   window.addEventListener("storage", onStoreChange);
@@ -48,7 +49,7 @@ export default function Home() {
     setJoinError("");
 
     try {
-      const response = await fetch("/api/join-quiz/", {
+      const response = await fetch(apiUrl("/join-quiz/"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

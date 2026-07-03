@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { apiUrl } from "@/app/lib/api";
 
 type Quiz = {
   id: number;
@@ -83,7 +84,7 @@ export default function EditQuizPage() {
 
       try {
         const response = await fetch(
-          `/api/quizzes/${params.id}/`,
+          apiUrl(`/quizzes/${params.id}/`),
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -142,7 +143,7 @@ export default function EditQuizPage() {
 
     try {
       const response = await fetch(
-        `/api/quizzes/${params.id}/`,
+        apiUrl(`/quizzes/${params.id}/`),
         {
           method: "PATCH",
           headers: {
@@ -198,7 +199,7 @@ export default function EditQuizPage() {
 
     try {
       const response = await fetch(
-        `/api/quizzes/${params.id}/`,
+        apiUrl(`/quizzes/${params.id}/`),
         {
           method: "DELETE",
           headers: {
