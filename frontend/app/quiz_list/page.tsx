@@ -28,6 +28,7 @@ export default function QuizList() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingQuizId, setDeletingQuizId] = useState<number | null>(null);
+  const [quizToDelete, setQuizToDelete] = useState<Quiz | null>(null);
 
   useEffect(() => {
     async function fetchQuizzes() {
@@ -81,14 +82,7 @@ export default function QuizList() {
       return;
     }
 
-    const shouldDelete = window.confirm(
-      "Delete this quiz and all of its questions?",
-    );
-
-    if (!shouldDelete) {
-      return;
-    }
-
+    setQuizToDelete(null);
     setDeletingQuizId(quizId);
     setError("");
 
@@ -228,7 +222,7 @@ export default function QuizList() {
                         className="inline-flex h-11 items-center justify-center rounded-md border border-red-200 px-4 text-sm font-semibold text-red-700 transition hover:border-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                         disabled={deletingQuizId === quiz.id}
                         type="button"
-                        onClick={() => handleDeleteQuiz(quiz.id)}
+                        onClick={() => setQuizToDelete(quiz)}
                       >
                         {deletingQuizId === quiz.id ? "Deleting..." : "Delete"}
                       </button>
@@ -266,6 +260,39 @@ export default function QuizList() {
             </div>
           )}
         </div>
+        {quizToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+            <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+              <h2 className="text-xl font-bold text-slate-950">
+                Delete quiz?
+              </h2>
+
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                This will delete {quizToDelete.title}, its questions, and all
+                related attempts. This action cannot be undone.
+              </p>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+                  type="button"
+                  onClick={() => setQuizToDelete(null)}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={deletingQuizId === quizToDelete.id}
+                  type="button"
+                  onClick={() => handleDeleteQuiz(quizToDelete.id)}
+                >
+                  {deletingQuizId === quizToDelete.id ? "Deleting..." : "Delete quiz"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </main>
   );

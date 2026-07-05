@@ -38,6 +38,7 @@ export default function EditQuestionPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const getToken = useCallback(() => {
     const token = localStorage.getItem("access_token");
@@ -172,12 +173,7 @@ export default function EditQuestionPage() {
       return;
     }
 
-    const shouldDelete = window.confirm("Delete this question?");
-
-    if (!shouldDelete) {
-      return;
-    }
-
+    setIsDeleteModalOpen(false);
     setIsDeleting(true);
     setError("");
 
@@ -222,7 +218,7 @@ export default function EditQuestionPage() {
               className="inline-flex h-11 items-center justify-center rounded-md border border-red-200 px-4 text-sm font-semibold text-red-700 transition hover:border-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isDeleting || !question}
               type="button"
-              onClick={handleDeleteQuestion}
+              onClick={() => setIsDeleteModalOpen(true)}
             >
               {isDeleting ? "Deleting..." : "Delete question"}
             </button>
@@ -348,6 +344,39 @@ export default function EditQuestionPage() {
             </div>
           </form>
         </div>
+        {isDeleteModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+            <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+              <h2 className="text-xl font-bold text-slate-950">
+                Delete question?
+              </h2>
+
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                This will delete this question and its choices. This action
+                cannot be undone.
+              </p>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+                  type="button"
+                  onClick={() => setIsDeleteModalOpen(false)}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isDeleting}
+                  type="button"
+                  onClick={handleDeleteQuestion}
+                >
+                  {isDeleting ? "Deleting..." : "Delete question"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </main>
   );

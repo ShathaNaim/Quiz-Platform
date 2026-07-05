@@ -58,13 +58,18 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error("Could not find quiz.");
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.detail || "Could not find a quiz with this code.");
       }
 
       router.push(`/join_quiz?code=${encodeURIComponent(code)}`);
     } catch (error) {
       console.error(error);
-      setJoinError("Could not find a published quiz with this code.");
+      setJoinError(
+        error instanceof Error
+          ? error.message
+          : "Could not find a quiz with this code.",
+      );
     } finally {
       setIsFindingQuiz(false);
     }
@@ -141,7 +146,8 @@ export default function Home() {
 
           <div
             id="take-quiz"
-            className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8 w-1/2 mx-auto"
+            className="mx-auto w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
+            
           >
             <div className="mb-7">
               <p className="text-sm font-semibold uppercase tracking-[0.16em] text-teal-700 text-center">

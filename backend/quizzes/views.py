@@ -7,11 +7,40 @@ from .serializers import (QuizSerializer, QuestionSerializer, ChoiceSerializer,
  PublicQuestionSerializer, SubmitAttemptSerializer)
 from django.contrib.auth.models import User
 from rest_framework import status, viewsets,mixins
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import generics
-# Create your views here.
+import secrets
+import string
+
+def generate_unique_quiz_code():
+    alphabet = string.ascii_uppercase + string.digits
+
+    while True:
+        code = "".join(secrets.choice(alphabet) for _ in range(6))
+        if not Quiz.objects.filter(code=code).exists():
+            return code
+
+
+def get_quiz_availability_error(quiz):
+    now = timezone.now()
+
+    if quiz.status != "published":
+        return "This quiz is not published."
+
+    if quiz.available_from and now < quiz.available_from:
+        return "This quiz is not available yet."
+
+    if quiz.available_until and now > quiz.available_until:
+        return "This quiz has expired."
+
+    return None
+
+
+def is_quiz_available(quiz):
+    return get_quiz_availability_error(quiz) is None
+
 TAB_SWITCH_AUTO_SUBMIT_LIMIT = 3
 
 
@@ -69,7 +98,17 @@ class QuizViewSet(viewsets.ModelViewSet):
         return Quiz.objects.filter(author=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        serializer.save(
+            author=self.request.user,
+            code=generate_unique_quiz_code(),
+        )
+
+    @action(detail=True, methods=["post"], url_path="regenerate-code")
+    def regenerate_code(self, request, pk=None):
+        quiz = self.get_object()
+        quiz.code = generate_unique_quiz_code()
+        quiz.save(update_fields=["code"])
+        return Response(self.get_serializer(quiz).data)
 
 
 
@@ -124,7 +163,14 @@ def join_quiz(request):
     serializer.is_valid(raise_exception=True)
 
     code = serializer.validated_data["code"].strip().upper()
-    quiz = get_object_or_404(Quiz, code=code, status="published")
+    quiz = get_object_or_404(Quiz, code=code)
+    availability_error = get_quiz_availability_error(quiz)
+
+    if availability_error:
+        return Response(
+            {"detail": availability_error},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     return Response(JoinedQuizSerializer(quiz).data)
 
@@ -140,19 +186,27 @@ def start_attempt(request):
         id=serializer.validated_data["quiz"],
         status="published",
     )
+    availability_error = get_quiz_availability_error(quiz)
+
+    if availability_error:
+        return Response(
+            {"detail": availability_error},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     participant_email = serializer.validated_data.get("participant_email", "").strip().lower()
 
-    existing_attempt = Attempt.objects.filter(
+    attempt_count = Attempt.objects.filter(
         quiz=quiz,
         participant_email__iexact=participant_email,
-    ).first()
+    ).count()
 
-    if existing_attempt:
+    if attempt_count >= quiz.max_attempts_per_email:
         return Response(
-            {"detail": "You already started this quiz."},
+            {"detail": "You have reached the attempt limit for this quiz."},
             status=status.HTTP_400_BAD_REQUEST,
         )
+        
 
     attempt = Attempt.objects.create(
         quiz=quiz,

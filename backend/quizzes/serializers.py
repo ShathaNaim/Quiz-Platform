@@ -7,7 +7,7 @@ class QuizSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quiz
         fields = '__all__'
-        read_only_fields = ['author']
+        read_only_fields = ['author', 'code']
 
         
 class ChoiceSerializer(serializers.ModelSerializer):
@@ -50,7 +50,7 @@ class JoinedQuizSerializer(serializers.ModelSerializer):
 class StartAttemptSerializer(serializers.Serializer):
     quiz = serializers.IntegerField()
     participant_name = serializers.CharField(max_length=255)
-    participant_email = serializers.EmailField(required=False, allow_blank=True)
+    participant_email = serializers.EmailField(required=True, allow_blank=True)
 
 
 class SubmitAttemptAnswerSerializer(serializers.Serializer):

@@ -19,6 +19,7 @@ export default function QuizQuestionsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingQuestionId, setDeletingQuestionId] = useState<number | null>(null);
+  const [questionToDelete, setQuestionToDelete] = useState<Question | null>(null);
 
   const fetchQuestions = useCallback(async () => {
     const token = localStorage.getItem("access_token");
@@ -88,14 +89,7 @@ export default function QuizQuestionsPage() {
       router.push("/sign-in");
       return;
     }
-    const shouldDelete = window.confirm(
-      "Delete this question?",
-    );
-
-    if (!shouldDelete) {
-      return;
-    }
-
+    setQuestionToDelete(null);
     setDeletingQuestionId(questionId);
     setError("");
 
@@ -237,7 +231,7 @@ export default function QuizQuestionsPage() {
                       className="inline-flex h-11 items-center justify-center rounded-md border border-red-200 px-4 text-sm font-semibold text-red-700 transition hover:border-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                       disabled={deletingQuestionId === question.id}
                       type="button"
-                      onClick={() => handleDeleteQuestion(question.id)}
+                      onClick={() => setQuestionToDelete(question)}
                     >
                       {deletingQuestionId === question.id ? "Deleting..." : "Delete"}
                     </button>
@@ -248,6 +242,41 @@ export default function QuizQuestionsPage() {
             </div>
           )}
         </div>
+        {questionToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+            <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+              <h2 className="text-xl font-bold text-slate-950">
+                Delete question?
+              </h2>
+
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                This will delete the selected question and its choices. This
+                action cannot be undone.
+              </p>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+                  type="button"
+                  onClick={() => setQuestionToDelete(null)}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={deletingQuestionId === questionToDelete.id}
+                  type="button"
+                  onClick={() => handleDeleteQuestion(questionToDelete.id)}
+                >
+                  {deletingQuestionId === questionToDelete.id
+                    ? "Deleting..."
+                    : "Delete question"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </main>
   );

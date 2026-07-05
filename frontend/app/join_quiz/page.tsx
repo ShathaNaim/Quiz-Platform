@@ -46,7 +46,8 @@ function JoinQuizContent() {
     });
 
     if (!response.ok) {
-      throw new Error("Could not find quiz.");
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.detail || "Could not find a quiz with this code.");
     }
 
     const data: JoinedQuiz = await response.json();
@@ -71,7 +72,11 @@ function JoinQuizContent() {
         if (shouldUpdate) {
           console.error(error);
           setCode(codeFromUrl);
-          setError("Could not find a published quiz with this code.");
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Could not find a quiz with this code.",
+          );
         }
       })
       .finally(() => {
@@ -105,7 +110,11 @@ function JoinQuizContent() {
       }
     } catch (error) {
       console.error(error);
-      setError("Could not find a published quiz with this code.");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Could not find a quiz with this code.",
+      );
     } finally {
       setIsFindingQuiz(false);
     }

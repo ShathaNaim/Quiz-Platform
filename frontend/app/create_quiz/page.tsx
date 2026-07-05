@@ -5,29 +5,25 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiUrl } from "@/app/lib/api";
 
-function generateQuizCode() {
-  const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-
-  for (let index = 0; index < 6; index += 1) {
-    code += characters[Math.floor(Math.random() * characters.length)];
-  }
-
-  return code;
-}
+type CreatedQuiz = {
+  id: number;
+  title: string;
+  code: string | null;
+};
 
 export default function CreateQuiz() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [code, setCode] = useState(() => generateQuizCode());
   const [timeLimit, setTimeLimit] = useState("");
   const [availableFrom, setAvailableFrom] = useState("");
   const [availableUntil, setAvailableUntil] = useState("");
   const [showResults, setShowResults] = useState(true);
   const [status, setStatus] = useState("draft");
+  const [maxAttemptsPerEmail, setMaxAttemptsPerEmail] = useState("1");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [createdQuiz, setCreatedQuiz] = useState<CreatedQuiz | null>(null);
 
   useEffect(() => {
     if (!localStorage.getItem("access_token")) {
@@ -38,6 +34,7 @@ export default function CreateQuiz() {
   async function handleCreateQuiz(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setCreatedQuiz(null);
     setIsSubmitting(true);
 
     const token = localStorage.getItem("access_token");
@@ -57,17 +54,18 @@ export default function CreateQuiz() {
         body: JSON.stringify({
           title,
           description,
-          code,
           time_limit: timeLimit ? Number(timeLimit) : null,
           available_from: availableFrom || null,
           available_until: availableUntil || null,
           show_result_to_student: showResults,
           status: status,
+          max_attempts_per_email: Math.max(1, Number(maxAttemptsPerEmail) || 1),
         }),
       });
 
       if (response.ok) {
-        router.push('/quiz_list');
+        const data = await response.json();
+        setCreatedQuiz(data);
         return;
       }
 
@@ -111,6 +109,39 @@ export default function CreateQuiz() {
             </p>
           </div>
 
+          {createdQuiz && (
+            <div className="mb-6 rounded-lg border border-teal-200 bg-teal-50 p-6 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-teal-700">
+                Quiz created
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-slate-950">
+                {createdQuiz.title}
+              </h2>
+              <div className="mt-5 rounded-md border border-teal-200 bg-white p-4">
+                <span className="block text-sm font-semibold text-slate-700">
+                  Quiz code
+                </span>
+                <span className="mt-1 block text-3xl font-bold uppercase tracking-[0.18em] text-slate-950">
+                  {createdQuiz.code}
+                </span>
+              </div>
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  className="inline-flex h-11 items-center justify-center rounded-md bg-teal-700 px-4 text-sm font-semibold text-white transition hover:bg-teal-800"
+                  href={`/quiz_questions/${createdQuiz.id}`}
+                >
+                  Add questions
+                </Link>
+                <Link
+                  className="inline-flex h-11 items-center justify-center rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-900 transition hover:border-slate-900"
+                  href="/quiz_list"
+                >
+                  View quiz list
+                </Link>
+              </div>
+            </div>
+          )}
+
           <form
             className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
             onSubmit={handleCreateQuiz}
@@ -150,37 +181,8 @@ export default function CreateQuiz() {
                   onChange={(event) => setDescription(event.target.value)}
                 />
               </div>
-
+             
               <div className="grid gap-5 sm:grid-cols-2">
-                <div>
-                  <label
-                    className="mb-2 block text-sm font-semibold text-slate-700"
-                    htmlFor="quiz-code"
-                  >
-                    Quiz code
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      className="h-12 w-full rounded-md border border-slate-300 px-4 text-base font-bold uppercase tracking-[0.14em] text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-teal-700 focus:ring-4 focus:ring-teal-100"
-                      id="quiz-code"
-                      maxLength={10}
-                      required
-                      type="text"
-                      value={code}
-                      onChange={(event) =>
-                        setCode(event.target.value.toUpperCase())
-                      }
-                    />
-                    <button
-                      className="h-12 rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-800 transition hover:border-slate-900 hover:bg-slate-50"
-                      type="button"
-                      onClick={() => setCode(generateQuizCode())}
-                    >
-                      Regenerate
-                    </button>
-                  </div>
-                </div>
-
                 <div>
                   <label
                     className="mb-2 block text-sm font-semibold text-slate-700"
@@ -252,7 +254,25 @@ export default function CreateQuiz() {
                   </select>
                 </div>
 
-                <label className="flex min-h-12 items-center justify-between rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-700 sm:col-span-2">
+                <div>
+                  <label
+                    className="mb-2 block text-sm font-semibold text-slate-700"
+                    htmlFor="max-attempts-per-email"
+                  >
+                    Max attempts per email
+                  </label>
+                  <input
+                    className="h-12 w-full rounded-md border border-slate-300 px-4 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-teal-700 focus:ring-4 focus:ring-teal-100"
+                    id="max-attempts-per-email"
+                    min="1"
+                    placeholder="1"
+                    type="number"
+                    value={maxAttemptsPerEmail}
+                    onChange={(event) => setMaxAttemptsPerEmail(event.target.value)}
+                  />
+                </div>
+
+                <label className="flex min-h-12 items-center justify-between rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-700">
                   Show results
                   <input
                     checked={showResults}
